@@ -1,11 +1,15 @@
 /**
  * Contract Processing Processor
- * 
+ *
  * Handles heavy contract operations including creation, updates, and finalization.
  * Integrates with blockchain for contract state management.
  */
 
 import { ContractProcessingPayload, JobResult } from '../types';
+import { contractMetadataVerificationService } from '../../services/soroban/contractMetadataVerification.service';
+import { EscrowHooks } from '../../hooks/escrow.hooks';
+import { KeyEscrowEvent } from '../../types/notification.types';
+import { sorobanEnv } from '../../sorobanEnv';
 
 /**
  * Process contract-related operations
@@ -82,17 +86,49 @@ async function updateContract(payload: ContractProcessingPayload): Promise<JobRe
  * Finalize contract and trigger payment release
  */
 async function finalizeContract(payload: ContractProcessingPayload): Promise<JobResult> {
-  await simulateBlockchainOperation(800);
-  
-  return {
-    success: true,
-    message: `Contract ${payload.contractId} finalized`,
-    data: {
-      contractId: payload.contractId,
-      status: 'completed',
-      timestamp: new Date().toISOString(),
-    },
-  };
+  try {
+    if (payload.sorobanContractAddress && payload.networkPassphrase) {
+      const networkPassphrase = payload.networkPassphrase || sorobanEnv.sorobanNetworkPassphrase;
+
+      if (contractMetadataVerificationService.isVerificationRequired(
+        payload.sorobanContractAddress,
+        networkPassphrase
+      )) {
+        await contractMetadataVerificationService.verifyContractMetadata(
+          payload.sorobanContractAddress,
+          networkPassphrase
+        );
+      }
+    }
+
+    await simulateBlockchainOperation(800);
+
+    return {
+      success: true,
+      message: `Contract ${payload.contractId} finalized`,
+      data: {
+        contractId: payload.contractId,
+        status: 'completed',
+        timestamp: new Date().toISOString(),
+      },
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    if (payload.contractId && payload.metadata?.userEmail) {
+      await EscrowHooks.onEscrowEvent(
+        KeyEscrowEvent.METADATA_VERIFICATION_FAILED,
+        {
+          contractId: payload.contractId,
+          userEmail: String(payload.metadata.userEmail),
+          userId: String(payload.metadata.userId || 'unknown'),
+          reason: `Contract verification failed: ${errorMessage}`,
+        }
+      );
+    }
+
+    throw error;
+  }
 }
 
 /**
