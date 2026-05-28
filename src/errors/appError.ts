@@ -81,6 +81,39 @@ export class ValidationError extends AppError {
 }
 
 /**
+ * Contract verification error - on-chain contract metadata mismatch.
+ */
+export class ContractVerificationError extends AppError {
+  constructor(message = 'Contract verification failed') {
+    super(422, 'contract_verification_failed', message);
+  }
+}
+
+/**
+ * Contract hash mismatch - on-chain code hash differs from expected.
+ */
+export class ContractHashMismatchError extends ContractVerificationError {
+  constructor(onChainHash: string, expectedHash: string) {
+    super(`On-chain contract hash does not match expected value`);
+    this.onChainHash = onChainHash;
+    this.expectedHash = expectedHash;
+  }
+  onChainHash: string;
+  expectedHash: string;
+}
+
+/**
+ * Contract not found on-chain.
+ */
+export class ContractNotFoundError extends AppError {
+  constructor(contractAddress: string) {
+    super(404, 'contract_not_found', 'Contract not found on-chain');
+    this.contractAddress = contractAddress;
+  }
+  contractAddress: string;
+}
+
+/**
  * Normalizes thrown errors into a safe and consistent API response payload.
  */
 export function mapErrorToPayload(

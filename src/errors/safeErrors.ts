@@ -28,6 +28,8 @@ export const SAFE_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   rate_limited: 'Too many requests — please try again later',
   conflict: 'The request conflicts with the current state',
   bad_request: 'The request could not be processed',
+  contract_verification_failed: 'Contract verification failed',
+  contract_not_found: 'Contract not found on-chain',
 };
 
 /**

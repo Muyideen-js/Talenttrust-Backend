@@ -35,6 +35,8 @@ export interface ContractProcessingPayload {
   contractId: string;
   action: 'create' | 'update' | 'finalize';
   metadata?: Record<string, unknown>;
+  sorobanContractAddress?: string;
+  networkPassphrase?: string;
   correlationId?: string;
   requestId?: string;
 }
